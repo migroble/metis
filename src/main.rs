@@ -1,6 +1,5 @@
 #![deny(clippy::pedantic)]
 
-mod command_handler;
 mod commands;
 mod db;
 mod handler;

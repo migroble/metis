@@ -1,18 +1,9 @@
-use crate::{command_handler::CommandHandler, manager::Manager};
-use serenity::{
-    async_trait,
-    builder::CreateApplicationCommand,
-    model::interactions::application_command::{
-        ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
-    },
-    prelude::*,
-};
-use std::{collections::HashMap, sync::Arc};
+use super::*;
 
 pub struct List;
 
 #[async_trait]
-impl CommandHandler for List {
+impl Command for List {
     fn create(&self, command: &mut CreateApplicationCommand) {
         command
             .name("list")

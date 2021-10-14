@@ -1,6 +1,5 @@
 use crate::{
-    command_handler::CommandHandler,
-    commands::{List, RemindMe, Tz},
+    commands::{Command, List, RemindMe, Tz},
     manager::Manager,
 };
 use serenity::{
@@ -9,11 +8,8 @@ use serenity::{
         gateway::Ready,
         id::GuildId,
         interactions::{
-            application_command::{
-                ApplicationCommand, ApplicationCommandInteractionDataOptionValue,
-                ApplicationCommandOptionType,
-            },
-            Interaction, InteractionApplicationCommandCallbackDataFlags, InteractionResponseType,
+            application_command::ApplicationCommand, Interaction,
+            InteractionApplicationCommandCallbackDataFlags, InteractionResponseType,
         },
     },
     prelude::*,
@@ -25,7 +21,7 @@ use std::env;
 
 pub struct Handler {
     manager: Manager,
-    commands: Vec<&'static (dyn CommandHandler + Sync)>,
+    commands: Vec<&'static (dyn Command + Sync)>,
 }
 
 impl Handler {

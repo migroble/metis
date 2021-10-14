@@ -1,22 +1,14 @@
-use crate::{command_handler::CommandHandler, manager::Manager, reminder::Reminder};
+use super::*;
+use crate::reminder::Reminder;
 use chrono::{Datelike, TimeZone, Timelike, Utc};
 use chrono_tz::Tz;
 use cron::Schedule;
-use serenity::{
-    async_trait,
-    builder::CreateApplicationCommand,
-    model::interactions::application_command::{
-        ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
-        ApplicationCommandOptionType,
-    },
-    prelude::*,
-};
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 pub struct RemindMe;
 
 #[async_trait]
-impl CommandHandler for RemindMe {
+impl Command for RemindMe {
     fn create(&self, command: &mut CreateApplicationCommand) {
         command
             .name("remindme")

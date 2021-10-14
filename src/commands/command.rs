@@ -1,16 +1,7 @@
-use crate::manager::Manager;
-use serenity::{
-    async_trait,
-    builder::CreateApplicationCommand,
-    model::interactions::application_command::{
-        ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
-    },
-    prelude::*,
-};
-use std::{collections::HashMap, sync::Arc};
+use super::*;
 
 #[async_trait]
-pub trait CommandHandler {
+pub trait Command {
     fn create(&self, command: &mut CreateApplicationCommand);
 
     fn can_handle(&self, name: &str) -> bool;

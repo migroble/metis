@@ -1,19 +1,9 @@
-use crate::{command_handler::CommandHandler, manager::Manager};
-use serenity::{
-    async_trait,
-    builder::CreateApplicationCommand,
-    model::interactions::application_command::{
-        ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
-        ApplicationCommandOptionType,
-    },
-    prelude::*,
-};
-use std::{collections::HashMap, sync::Arc};
+use super::*;
 
 pub struct Tz;
 
 #[async_trait]
-impl CommandHandler for Tz {
+impl Command for Tz {
     fn create(&self, command: &mut CreateApplicationCommand) {
         command
             .name("tz")
