@@ -1,6 +1,6 @@
 use crate::manager::Manager;
 use crate::reminder::Reminder;
-use chrono::Utc;
+use chrono::{Datelike, TimeZone, Timelike, Utc};
 use chrono_tz::{Etc::UTC, Tz};
 use cron::Schedule;
 use serenity::{
@@ -19,7 +19,7 @@ use serenity::{
     prelude::*,
 };
 use slotmap::DefaultKey;
-use std::{str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tokio::{sync::RwLock, time::sleep};
 
 // DEV DEP: Used to get DEV_GUILD
@@ -102,28 +102,72 @@ impl EventHandler for Handler {
             // stop the reminders
             let content = match command.data.name.as_str() {
                 "remindme" => {
-                    let mut options: Vec<String> = command
+                    let options: HashMap<String, String> = command
                         .data
                         .options
                         .iter()
                         .map(|o| {
-                            // This should never panic
+                            // This should never panic because all options are strings
                             if let ApplicationCommandInteractionDataOptionValue::String(s) =
                                 o.resolved.as_ref().expect("Expected option")
                             {
-                                s
+                                (o.name.clone(), s.clone())
                             } else {
                                 panic!("Expected string option");
                             }
                         })
-                        .cloned()
                         .collect();
 
-                    // This shouldn't panic either
-                    let msg = options.pop().expect("Expected message");
+                    // cron string construction
 
-                    let sched = "0 ".to_string() + &options.join(" ") + " *";
+                    // We get the timezone-adjusted current datetime as fallback values
+                    let tz = self
+                        .db
+                        .read()
+                        .await
+                        .tz(command.channel_id)
+                        .unwrap_or(Tz::Etc__UTC);
+                    let now = tz.from_utc_datetime(&Utc::now().naive_utc());
+
+                    // Day of month and day of week are interrelated, therefore we must be careful
+                    // when using them as fallback values
+                    //
+                    // If only one is set, we should set the other to "?" rather than the current
+                    // date to avoid unintended behaviour
+                    let (dom, dow) = {
+                        let dom_opt = options.get("dom");
+                        let dow_opt = options.get("dow");
+
+                        if let Some(dom) = dom_opt {
+                            if let Some(dow) = dow_opt {
+                                (dom.to_string(), dow.to_string())
+                            } else {
+                                (dom.to_string(), "?".to_string())
+                            }
+                        } else if let Some(dow) = dow_opt {
+                            ("?".to_string(), dow.to_string())
+                        } else {
+                            (now.month().to_string(), now.weekday().to_string())
+                        }
+                    };
+
+                    // We always put a 0 in the seconds slot since it is unlikely to be useful to
+                    // the end user
+                    let sched = format!(
+                        "0 {} {} {} {} {} {}",
+                        options.get("min").unwrap_or(&now.minute().to_string()),
+                        options.get("hour").unwrap_or(&now.hour().to_string()),
+                        dom,
+                        options.get("month").unwrap_or(&now.month().to_string()),
+                        dow,
+                        options.get("year").unwrap_or(&now.year().to_string()),
+                    );
+
+                    println!("{}", sched);
                     if let Ok(sched) = Schedule::from_str(&sched) {
+                        // The msg option is required, we are guaranteed to have it
+                        let msg = options.get("msg").unwrap().to_string();
+
                         self.add_reminder(
                             Arc::clone(&ctx),
                             command.channel_id,
@@ -227,45 +271,52 @@ impl EventHandler for Handler {
                         .description("Sends message at scheduled time(s) using cron format")
                         .create_option(|option| {
                             option
+                                .name("msg")
+                                .description("Message to be sent")
+                                .kind(ApplicationCommandOptionType::String)
+                                .required(true)
+                        })
+                        .create_option(|option| {
+                            option
                                 .name("min")
                                 .description("Minute (0-59)")
                                 .kind(ApplicationCommandOptionType::String)
-                                .required(true)
+                                .required(false)
                         })
                         .create_option(|option| {
                             option
                                 .name("hour")
                                 .description("Hour (0-23)")
                                 .kind(ApplicationCommandOptionType::String)
-                                .required(true)
+                                .required(false)
                         })
                         .create_option(|option| {
                             option
                                 .name("dom")
                                 .description("Day of month (1-31)")
                                 .kind(ApplicationCommandOptionType::String)
-                                .required(true)
+                                .required(false)
                         })
                         .create_option(|option| {
                             option
                                 .name("month")
                                 .description("Month (1-12 or Jan-Dec)")
                                 .kind(ApplicationCommandOptionType::String)
-                                .required(true)
+                                .required(false)
                         })
                         .create_option(|option| {
                             option
                                 .name("dow")
                                 .description("Day of week (Sun-Sat)")
                                 .kind(ApplicationCommandOptionType::String)
-                                .required(true)
+                                .required(false)
                         })
                         .create_option(|option| {
                             option
-                                .name("msg")
-                                .description("Message to be sent")
+                                .name("year")
+                                .description("Year")
                                 .kind(ApplicationCommandOptionType::String)
-                                .required(true)
+                                .required(false)
                         })
                 })
                 .create_application_command(|command| {

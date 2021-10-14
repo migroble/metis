@@ -68,6 +68,10 @@ impl Manager {
         self.persist().await;
     }
 
+    pub fn tz(&self, key: ChannelId) -> Option<Tz> {
+        self.data.get(&key).map(|cd| cd.tz)
+    }
+
     pub async fn set_tz(&mut self, key: ChannelId, tz_str: &str) -> Result<(), ParseError> {
         self.data
             .entry(key)
