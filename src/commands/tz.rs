@@ -1,8 +1,10 @@
 use crate::{command_handler::CommandHandler, manager::Manager};
 use serenity::{
     async_trait,
+    builder::CreateApplicationCommand,
     model::interactions::application_command::{
         ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
+        ApplicationCommandOptionType,
     },
     prelude::*,
 };
@@ -12,6 +14,19 @@ pub struct Tz;
 
 #[async_trait]
 impl CommandHandler for Tz {
+    fn create(&self, command: &mut CreateApplicationCommand) {
+        command
+            .name("tz")
+            .description("Set timezone for this channel")
+            .create_option(|option| {
+                option
+                    .name("tz")
+                    .description("IANA timezone name")
+                    .kind(ApplicationCommandOptionType::String)
+                    .required(true)
+            });
+    }
+
     fn can_handle(&self, name: &str) -> bool {
         name == "tz"
     }

@@ -105,78 +105,12 @@ impl EventHandler for Handler {
                 .expect("Failed to parse guild ID"),
         )
         .set_application_commands(&ctx.http, |commands| {
-            commands
-                .create_application_command(|command| {
+            self.commands.iter().fold(commands, |commands, c| {
+                commands.create_application_command(|command| {
+                    c.create(command);
                     command
-                        .name("remindme")
-                        .description("Sends message at scheduled time(s) using cron format")
-                        .create_option(|option| {
-                            option
-                                .name("msg")
-                                .description("Message to be sent")
-                                .kind(ApplicationCommandOptionType::String)
-                                .required(true)
-                        })
-                        .create_option(|option| {
-                            option
-                                .name("min")
-                                .description("Minute (0-59)")
-                                .kind(ApplicationCommandOptionType::String)
-                                .required(false)
-                        })
-                        .create_option(|option| {
-                            option
-                                .name("hour")
-                                .description("Hour (0-23)")
-                                .kind(ApplicationCommandOptionType::String)
-                                .required(false)
-                        })
-                        .create_option(|option| {
-                            option
-                                .name("dom")
-                                .description("Day of month (1-31)")
-                                .kind(ApplicationCommandOptionType::String)
-                                .required(false)
-                        })
-                        .create_option(|option| {
-                            option
-                                .name("month")
-                                .description("Month (1-12 or Jan-Dec)")
-                                .kind(ApplicationCommandOptionType::String)
-                                .required(false)
-                        })
-                        .create_option(|option| {
-                            option
-                                .name("dow")
-                                .description("Day of week (Sun-Sat)")
-                                .kind(ApplicationCommandOptionType::String)
-                                .required(false)
-                        })
-                        .create_option(|option| {
-                            option
-                                .name("year")
-                                .description("Year")
-                                .kind(ApplicationCommandOptionType::String)
-                                .required(false)
-                        })
                 })
-                .create_application_command(|command| {
-                    command
-                        .name("list")
-                        .description("Lists all reminders for this channel")
-                })
-                .create_application_command(|command| {
-                    command
-                        .name("tz")
-                        .description("Set timezone for this channel")
-                        .create_option(|option| {
-                            option
-                                .name("tz")
-                                .description("IANA timezone name")
-                                .kind(ApplicationCommandOptionType::String)
-                                .required(true)
-                        })
-                })
+            })
         })
         .await
         .expect("Error creating commands");

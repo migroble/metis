@@ -1,6 +1,7 @@
 use crate::{command_handler::CommandHandler, manager::Manager};
 use serenity::{
     async_trait,
+    builder::CreateApplicationCommand,
     model::interactions::application_command::{
         ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
     },
@@ -12,6 +13,12 @@ pub struct List;
 
 #[async_trait]
 impl CommandHandler for List {
+    fn create(&self, command: &mut CreateApplicationCommand) {
+        command
+            .name("list")
+            .description("Lists all reminders for this channel");
+    }
+
     fn can_handle(&self, name: &str) -> bool {
         name == "list"
     }

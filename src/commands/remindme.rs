@@ -4,8 +4,10 @@ use chrono_tz::Tz;
 use cron::Schedule;
 use serenity::{
     async_trait,
+    builder::CreateApplicationCommand,
     model::interactions::application_command::{
         ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
+        ApplicationCommandOptionType,
     },
     prelude::*,
 };
@@ -15,6 +17,61 @@ pub struct RemindMe;
 
 #[async_trait]
 impl CommandHandler for RemindMe {
+    fn create(&self, command: &mut CreateApplicationCommand) {
+        command
+            .name("remindme")
+            .description("Sends message at scheduled time(s) using cron format")
+            .create_option(|option| {
+                option
+                    .name("msg")
+                    .description("Message to be sent")
+                    .kind(ApplicationCommandOptionType::String)
+                    .required(true)
+            })
+            .create_option(|option| {
+                option
+                    .name("min")
+                    .description("Minute (0-59)")
+                    .kind(ApplicationCommandOptionType::String)
+                    .required(false)
+            })
+            .create_option(|option| {
+                option
+                    .name("hour")
+                    .description("Hour (0-23)")
+                    .kind(ApplicationCommandOptionType::String)
+                    .required(false)
+            })
+            .create_option(|option| {
+                option
+                    .name("dom")
+                    .description("Day of month (1-31)")
+                    .kind(ApplicationCommandOptionType::String)
+                    .required(false)
+            })
+            .create_option(|option| {
+                option
+                    .name("month")
+                    .description("Month (1-12 or Jan-Dec)")
+                    .kind(ApplicationCommandOptionType::String)
+                    .required(false)
+            })
+            .create_option(|option| {
+                option
+                    .name("dow")
+                    .description("Day of week (Sun-Sat)")
+                    .kind(ApplicationCommandOptionType::String)
+                    .required(false)
+            })
+            .create_option(|option| {
+                option
+                    .name("year")
+                    .description("Year")
+                    .kind(ApplicationCommandOptionType::String)
+                    .required(false)
+            });
+    }
+
     fn can_handle(&self, name: &str) -> bool {
         name == "remindme"
     }
