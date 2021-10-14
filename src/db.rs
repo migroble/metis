@@ -40,14 +40,16 @@ impl Db {
             .seek(SeekFrom::Start(0))
             .await
             .expect("Error seeking to start of database file");
+
+        let content = serde_json::to_string(&self.data).expect("Error serializing data");
         self.file
-            .write_all(
-                serde_json::to_string(&self.data)
-                    .expect("Error serializing data")
-                    .as_bytes(),
-            )
+            .write_all(&content.as_bytes())
             .await
             .expect("Error writing to database file");
+        self.file
+            .set_len(content.len() as u64)
+            .await
+            .expect("Error setting database file length");
     }
 
     pub async fn insert(&mut self, key: ChannelId, data: Reminder) -> DefaultKey {
