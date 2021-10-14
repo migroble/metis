@@ -9,12 +9,12 @@ use tokio::{
     io::{AsyncReadExt, AsyncSeek, AsyncWriteExt},
 };
 
-pub struct Manager {
+pub struct Db {
     file: File,
     data: HashMap<ChannelId, ChannelData, BuildHasherDefault<AHasher>>,
 }
 
-impl Manager {
+impl Db {
     pub async fn open(db_path: &str) -> Self {
         let mut file = OpenOptions::new()
             .read(true)

@@ -1,4 +1,4 @@
-use crate::manager::Manager;
+use crate::db::Db;
 use crate::reminder::Reminder;
 use chrono::{Datelike, TimeZone, Timelike, Utc};
 use chrono_tz::{Etc::UTC, Tz};
@@ -26,13 +26,13 @@ use tokio::{sync::RwLock, time::sleep};
 use std::env;
 
 pub struct Handler {
-    db: Arc<RwLock<Manager>>,
+    db: Arc<RwLock<Db>>,
 }
 
 impl Handler {
     pub async fn with_file(db_path: &str) -> Self {
         Self {
-            db: Arc::new(RwLock::new(Manager::open(db_path).await)),
+            db: Arc::new(RwLock::new(Db::open(db_path).await)),
         }
     }
 
