@@ -15,7 +15,7 @@ pub struct RemindMe;
 
 #[async_trait]
 impl CommandHandler for RemindMe {
-    fn can_handle(&self, name: String) -> bool {
+    fn can_handle(&self, name: &str) -> bool {
         name == "remindme"
     }
 

@@ -12,7 +12,7 @@ pub struct Tz;
 
 #[async_trait]
 impl CommandHandler for Tz {
-    fn can_handle(&self, name: String) -> bool {
+    fn can_handle(&self, name: &str) -> bool {
         name == "tz"
     }
 

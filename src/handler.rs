@@ -25,12 +25,14 @@ use std::env;
 
 pub struct Handler {
     manager: Manager,
+    commands: Vec<&'static (dyn CommandHandler + Sync)>,
 }
 
 impl Handler {
     pub async fn with_file(db_path: &str) -> Self {
         Self {
             manager: Manager::with_file(db_path).await,
+            commands: vec![&RemindMe, &List, &Tz],
         }
     }
 }
@@ -57,21 +59,17 @@ impl EventHandler for Handler {
 
             // TODO: Add tempremindme command that creates an action row with a button to
             // stop the reminders
-            let content = match command.data.name.as_str() {
-                "remindme" => {
-                    RemindMe
-                        .handle(Arc::clone(&ctx), &self.manager, &command, options)
-                        .await
-                }
-                "list" => {
-                    List.handle(Arc::clone(&ctx), &self.manager, &command, options)
-                        .await
-                }
-                "tz" => {
-                    Tz.handle(Arc::clone(&ctx), &self.manager, &command, options)
-                        .await
-                }
-                _ => "not implemented".to_string(),
+            let handler_opt = self
+                .commands
+                .iter()
+                .filter(|c| c.can_handle(&command.data.name))
+                .next();
+
+            let content = if let Some(c) = handler_opt {
+                c.handle(Arc::clone(&ctx), &self.manager, &command, options)
+                    .await
+            } else {
+                "not_implemented".to_string()
             };
 
             if let Err(why) = command

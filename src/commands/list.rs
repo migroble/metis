@@ -12,7 +12,7 @@ pub struct List;
 
 #[async_trait]
 impl CommandHandler for List {
-    fn can_handle(&self, name: String) -> bool {
+    fn can_handle(&self, name: &str) -> bool {
         name == "list"
     }
 
