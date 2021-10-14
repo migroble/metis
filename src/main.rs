@@ -1,7 +1,10 @@
 #![deny(clippy::pedantic)]
 
-mod handler;
+mod command_handler;
+mod commands;
 mod db;
+mod handler;
+mod manager;
 mod reminder;
 
 use dotenv::dotenv;

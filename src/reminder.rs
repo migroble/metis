@@ -24,7 +24,7 @@ pub struct Reminder {
     pub msg: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ChannelData {
     pub tz: Tz,
     pub reminders: SlotMap<DefaultKey, Reminder>,

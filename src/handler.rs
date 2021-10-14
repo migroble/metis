@@ -1,13 +1,13 @@
-use crate::db::Db;
-use crate::reminder::Reminder;
-use chrono::{Datelike, TimeZone, Timelike, Utc};
-use chrono_tz::{Etc::UTC, Tz};
-use cron::Schedule;
+use crate::{
+    command_handler::CommandHandler,
+    commands::{List, RemindMe, Tz},
+    manager::Manager,
+};
 use serenity::{
     async_trait,
     model::{
         gateway::Ready,
-        id::{ChannelId, GuildId},
+        id::GuildId,
         interactions::{
             application_command::{
                 ApplicationCommand, ApplicationCommandInteractionDataOptionValue,
@@ -18,74 +18,20 @@ use serenity::{
     },
     prelude::*,
 };
-use slotmap::DefaultKey;
-use std::{collections::HashMap, str::FromStr, sync::Arc};
-use tokio::{sync::RwLock, time::sleep};
+use std::sync::Arc;
 
 // DEV DEP: Used to get DEV_GUILD
 use std::env;
 
 pub struct Handler {
-    db: Arc<RwLock<Db>>,
+    manager: Manager,
 }
 
 impl Handler {
     pub async fn with_file(db_path: &str) -> Self {
         Self {
-            db: Arc::new(RwLock::new(Db::open(db_path).await)),
+            manager: Manager::with_file(db_path).await,
         }
-    }
-
-    fn start_reminding(
-        &self,
-        ctx: Arc<Context>,
-        channel_id: ChannelId,
-        tz: Tz,
-        key: DefaultKey,
-        reminder: Reminder,
-    ) {
-        let db = Arc::clone(&self.db);
-        tokio::spawn(async move {
-            let sched = reminder.sched;
-
-            for datetime in sched.upcoming(tz) {
-                // We ensure chrono::Duration::to_std cannot panic by checking that the number
-                // of seconds is positive. Additionally, a non-positive number of seconds means
-                // we don't have to sleep
-                let remaining = datetime.signed_duration_since(Utc::now());
-                if remaining.num_seconds() > 0 {
-                    sleep(remaining.to_std().unwrap()).await;
-                }
-
-                if db.read().await.has_reminder(channel_id, key) {
-                    // TODO: Log when no permission to send message rather than panic
-                    channel_id
-                        .send_message(&ctx, |m| m.content(&reminder.msg))
-                        .await
-                        .expect("Error sending reminder");
-                } else {
-                    // Another task removed this reminder so we stop
-                    break;
-                }
-            }
-
-            // If there are no more reminders, the entry is removed
-            db.write().await.remove(channel_id, key).await;
-        });
-    }
-
-    async fn add_reminder(&self, ctx: Arc<Context>, channel_id: ChannelId, reminder: Reminder) {
-        let key = self
-            .db
-            .write()
-            .await
-            .insert(channel_id, reminder.clone())
-            .await;
-        self.start_reminding(ctx, channel_id, UTC, key, reminder);
-    }
-
-    async fn remove_reminder(&self, channel_id: ChannelId, key: DefaultKey) {
-        self.db.write().await.remove(channel_id, key).await;
     }
 }
 
@@ -94,6 +40,17 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             let ctx = Arc::new(ctx);
+            let options = command
+                .data
+                .options
+                .iter()
+                .map(|o| {
+                    (
+                        o.name.clone(),
+                        o.resolved.as_ref().expect("Expected option").clone(),
+                    )
+                })
+                .collect();
 
             // TODO: Add list and remove reminder commands (explore using action row -> list
             // + delete button)
@@ -102,127 +59,17 @@ impl EventHandler for Handler {
             // stop the reminders
             let content = match command.data.name.as_str() {
                 "remindme" => {
-                    let options: HashMap<String, String> = command
-                        .data
-                        .options
-                        .iter()
-                        .map(|o| {
-                            // This should never panic because all options are strings
-                            if let ApplicationCommandInteractionDataOptionValue::String(s) =
-                                o.resolved.as_ref().expect("Expected option")
-                            {
-                                (o.name.clone(), s.clone())
-                            } else {
-                                panic!("Expected string option");
-                            }
-                        })
-                        .collect();
-
-                    // cron string construction
-
-                    // We get the timezone-adjusted current datetime as fallback values
-                    let tz = self
-                        .db
-                        .read()
+                    RemindMe
+                        .handle(Arc::clone(&ctx), &self.manager, &command, options)
                         .await
-                        .tz(command.channel_id)
-                        .unwrap_or(Tz::Etc__UTC);
-                    let now = tz.from_utc_datetime(&Utc::now().naive_utc());
-
-                    // Day of month and day of week are interrelated, therefore we must be careful
-                    // when using them as fallback values
-                    //
-                    // If only one is set, we should set the other to "?" rather than the current
-                    // date to avoid unintended behaviour
-                    let (dom, dow) = {
-                        let dom_opt = options.get("dom");
-                        let dow_opt = options.get("dow");
-
-                        if let Some(dom) = dom_opt {
-                            if let Some(dow) = dow_opt {
-                                (dom.to_string(), dow.to_string())
-                            } else {
-                                (dom.to_string(), "?".to_string())
-                            }
-                        } else if let Some(dow) = dow_opt {
-                            ("?".to_string(), dow.to_string())
-                        } else {
-                            (now.month().to_string(), now.weekday().to_string())
-                        }
-                    };
-
-                    // We always put a 0 in the seconds slot since it is unlikely to be useful to
-                    // the end user
-                    let sched = format!(
-                        "0 {} {} {} {} {} {}",
-                        options.get("min").unwrap_or(&now.minute().to_string()),
-                        options.get("hour").unwrap_or(&now.hour().to_string()),
-                        dom,
-                        options.get("month").unwrap_or(&now.month().to_string()),
-                        dow,
-                        options.get("year").unwrap_or(&now.year().to_string()),
-                    );
-
-                    println!("{}", sched);
-                    if let Ok(sched) = Schedule::from_str(&sched) {
-                        // The msg option is required, we are guaranteed to have it
-                        let msg = options.get("msg").unwrap().to_string();
-
-                        self.add_reminder(
-                            Arc::clone(&ctx),
-                            command.channel_id,
-                            Reminder { sched, msg },
-                        )
-                        .await;
-
-                        "done"
-                    } else {
-                        "invalid cron expression"
-                    }
-                    .to_string()
                 }
                 "list" => {
-                    let reminders = self
-                        .db
-                        .read()
+                    List.handle(Arc::clone(&ctx), &self.manager, &command, options)
                         .await
-                        .channel_iter(command.channel_id)
-                        .map_or_else(Vec::new, |i| {
-                            i.map(|(_k, r)| r.sched.to_string() + " | " + &r.msg)
-                                .collect::<Vec<_>>()
-                        });
-
-                    reminders.join("\n")
                 }
                 "tz" => {
-                    let option = command
-                        .data
-                        .options
-                        .get(0)
-                        .expect("Expected option")
-                        .resolved
-                        .as_ref()
-                        .expect("Expected string");
-                    let tz_str =
-                        if let ApplicationCommandInteractionDataOptionValue::String(s) = option {
-                            s
-                        } else {
-                            panic!("Expected string option");
-                        };
-
-                    if self
-                        .db
-                        .write()
+                    Tz.handle(Arc::clone(&ctx), &self.manager, &command, options)
                         .await
-                        .set_tz(command.channel_id, tz_str)
-                        .await
-                        .is_ok()
-                    {
-                        "done"
-                    } else {
-                        "invalid timezone (list of timezone names: <https://w.wiki/4Jx>, capitalization matters!)"
-                    }
-                    .to_string()
                 }
                 _ => "not implemented".to_string(),
             };
@@ -249,11 +96,7 @@ impl EventHandler for Handler {
         let ctx = Arc::new(ctx);
 
         // Start reminders
-        self.db
-            .read()
-            .await
-            .iter()
-            .for_each(|(c, t, k, r)| self.start_reminding(Arc::clone(&ctx), *c, t, k, r.clone()));
+        self.manager.start_reminders(Arc::clone(&ctx)).await;
 
         // Set commands up
         // ApplicationCommand::set_global_application_commands

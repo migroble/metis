@@ -3,10 +3,10 @@ use ahash::AHasher;
 use chrono_tz::{ParseError, Tz};
 use serenity::model::id::ChannelId;
 use slotmap::DefaultKey;
-use std::{collections::HashMap, hash::BuildHasherDefault, io::SeekFrom, iter::repeat, pin::Pin};
+use std::{collections::HashMap, hash::BuildHasherDefault, io::SeekFrom, iter::repeat};
 use tokio::{
     fs::{File, OpenOptions},
-    io::{AsyncReadExt, AsyncSeek, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
 };
 
 pub struct Db {
@@ -35,9 +35,10 @@ impl Db {
         Self { file, data }
     }
 
-    async fn persist(&mut self) {
-        Pin::new(&mut self.file)
-            .start_seek(SeekFrom::Start(0))
+    pub async fn persist(&mut self) {
+        self.file
+            .seek(SeekFrom::Start(0))
+            .await
             .expect("Error seeking to start of database file");
         self.file
             .write_all(
@@ -96,10 +97,7 @@ impl Db {
         })
     }
 
-    pub fn channel_iter(
-        &self,
-        key: ChannelId,
-    ) -> Option<impl Iterator<Item = (DefaultKey, &Reminder)>> {
-        self.data.get(&key).map(|cd| cd.reminders.iter())
+    pub fn channel_data(&self, key: ChannelId) -> Option<&ChannelData> {
+        self.data.get(&key)
     }
 }
