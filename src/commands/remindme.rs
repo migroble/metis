@@ -113,7 +113,7 @@ impl Command for RemindMe {
             } else if let Some(dow) = dow_opt {
                 ("?".to_string(), dow.to_string())
             } else {
-                (now.month().to_string(), now.weekday().to_string())
+                (now.day().to_string(), now.weekday().to_string())
             }
         };
 
