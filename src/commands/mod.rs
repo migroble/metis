@@ -12,10 +12,10 @@ use std::{collections::HashMap, sync::Arc};
 
 mod command;
 mod menu;
-mod remindme;
+mod remind;
 mod tz;
 
 pub use command::Command;
 pub use menu::Menu;
-pub use remindme::RemindMe;
+pub use remind::{RemindMe, RemindOnce};
 pub use tz::Tz;

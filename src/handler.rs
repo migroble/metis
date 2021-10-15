@@ -1,5 +1,5 @@
 use crate::{
-    commands::{Command, Menu, RemindMe, Tz},
+    commands::{Command, Menu, RemindMe, RemindOnce, Tz},
     manager::Manager,
     reminder_menu::ReminderMenu,
 };
@@ -26,7 +26,7 @@ impl Handler {
     pub async fn with_file(db_path: &str) -> Self {
         Self {
             manager: Manager::with_file(db_path).await,
-            commands: vec![&RemindMe, &Menu, &Tz],
+            commands: vec![&Menu, &RemindMe, &RemindOnce, &Tz],
         }
     }
 }

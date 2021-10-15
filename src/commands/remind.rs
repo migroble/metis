@@ -3,14 +3,13 @@ use crate::reminder::Reminder;
 use cron::Schedule;
 use std::str::FromStr;
 
-pub struct RemindMe;
+struct Remind;
 
-#[async_trait]
-impl Command for RemindMe {
-    fn create(&self, command: &mut CreateApplicationCommand) {
+impl Remind {
+    fn create(command: &mut CreateApplicationCommand, name: &str, description: &str) {
         command
-            .name("remindme")
-            .description("Sends message at scheduled time(s) using cron format")
+            .name(name)
+            .description(description)
             .create_option(|option| {
                 option
                     .name("msg")
@@ -62,12 +61,7 @@ impl Command for RemindMe {
             });
     }
 
-    fn can_handle(&self, name: &str) -> bool {
-        name == "remindme" && name == "remindonce"
-    }
-
     async fn handle(
-        &self,
         ctx: Arc<Context>,
         manager: &Manager,
         command: &ApplicationCommandInteraction,
@@ -121,7 +115,6 @@ impl Command for RemindMe {
             options.get("year").unwrap_or(&asterisk),
         );
 
-        println!("{}", sched);
         let content = if let Ok(sched) = Schedule::from_str(&sched) {
             // The msg option is required, we are guaranteed to have it
             let msg = options.get("msg").unwrap().to_string();
@@ -152,5 +145,59 @@ impl Command for RemindMe {
         {
             println!("Cannot respond to slash command: {:#?}", why);
         }
+    }
+}
+
+pub struct RemindMe;
+
+#[async_trait]
+impl Command for RemindMe {
+    fn create(&self, command: &mut CreateApplicationCommand) {
+        Remind::create(
+            command,
+            "remindme",
+            "Sends message at scheduled time(s) using cron format",
+        );
+    }
+
+    fn can_handle(&self, name: &str) -> bool {
+        name == "remindme"
+    }
+
+    async fn handle(
+        &self,
+        ctx: Arc<Context>,
+        manager: &Manager,
+        command: &ApplicationCommandInteraction,
+        options: HashMap<String, ApplicationCommandInteractionDataOptionValue>,
+    ) {
+        Remind::handle(ctx, manager, command, options).await;
+    }
+}
+
+pub struct RemindOnce;
+
+#[async_trait]
+impl Command for RemindOnce {
+    fn create(&self, command: &mut CreateApplicationCommand) {
+        Remind::create(
+            command,
+            "remindonce",
+            "Sends message once at a scheduled time using cron format",
+        );
+    }
+
+    fn can_handle(&self, name: &str) -> bool {
+        name == "remindonce"
+    }
+
+    async fn handle(
+        &self,
+        ctx: Arc<Context>,
+        manager: &Manager,
+        command: &ApplicationCommandInteraction,
+        options: HashMap<String, ApplicationCommandInteractionDataOptionValue>,
+    ) {
+        Remind::handle(ctx, manager, command, options).await;
     }
 }
