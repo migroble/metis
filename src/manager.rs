@@ -3,7 +3,7 @@ use crate::{
     reminder::{ChannelData, Reminder},
 };
 use chrono::Utc;
-use chrono_tz::{Etc::UTC, ParseError, Tz};
+use chrono_tz::{ParseError, Tz};
 use serenity::{model::id::ChannelId, prelude::*};
 use slotmap::DefaultKey;
 use std::sync::Arc;
@@ -95,7 +95,10 @@ impl Manager {
             .await
             .insert(channel_id, reminder.clone())
             .await;
-        self.start_reminding(ctx, channel_id, UTC, key, reminder);
+        // This value is guaranteed to exist because at the very least we just inserted
+        // a key into this entry
+        let tz = self.channel_tz(channel_id).await.unwrap();
+        self.start_reminding(ctx, channel_id, tz, key, reminder);
     }
 
     pub async fn remove_reminder(&self, channel_id: ChannelId, key: DefaultKey) {
