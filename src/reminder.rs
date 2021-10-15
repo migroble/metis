@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use chrono_tz::{Etc::UTC, ParseError, Tz};
 use cron::Schedule;
 use serde::{Deserialize, Serialize};
@@ -18,11 +19,16 @@ impl From<ScheduleDef> for Schedule {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Reminder {
+pub enum ReminderType {
     #[serde(with = "ScheduleDef")]
-    pub sched: Schedule,
+    Scheduled(Schedule),
+    Once(NaiveDateTime),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Reminder {
+    pub reminder_type: ReminderType,
     pub msg: String,
-    pub once: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

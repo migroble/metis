@@ -1,5 +1,6 @@
 use super::*;
-use crate::reminder::Reminder;
+use crate::reminder::{Reminder, ReminderType};
+use chrono_tz::Etc::UTC;
 use cron::Schedule;
 use std::str::FromStr;
 
@@ -118,15 +119,23 @@ impl Remind {
             // The msg option is required, we are guaranteed to have it
             let msg = options.get("msg").unwrap().to_string();
 
+            let reminder_type = if command.data.name == "remindonce" {
+                ReminderType::Once(
+                    sched
+                        .upcoming(manager.channel_tz(command.channel_id).await.unwrap_or(UTC))
+                        .next()
+                        .expect("Invalid schedule")
+                        .naive_utc(),
+                )
+            } else {
+                ReminderType::Scheduled(sched)
+            };
+
             manager
                 .add_reminder(
                     Arc::clone(&ctx),
                     command.channel_id,
-                    Reminder {
-                        sched,
-                        msg,
-                        once: command.data.name == "remindonce",
-                    },
+                    Reminder { reminder_type, msg },
                 )
                 .await;
 

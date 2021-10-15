@@ -1,13 +1,46 @@
 use crate::{
     db::Db,
-    reminder::{ChannelData, Reminder},
+    reminder::{ChannelData, Reminder, ReminderType},
 };
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 use chrono_tz::{ParseError, Tz};
 use serenity::{model::id::ChannelId, prelude::*};
 use slotmap::DefaultKey;
 use std::sync::Arc;
 use tokio::{sync::RwLock, time::sleep};
+
+async fn wait_until(datetime: NaiveDateTime) {
+    // We ensure chrono::Duration::to_std cannot panic by checking that the number
+    // of seconds is positive. Additionally, a non-positive number of seconds means
+    // we don't have to sleep
+    let remaining = datetime.signed_duration_since(Utc::now().naive_utc());
+    if remaining.num_seconds() > 0 {
+        sleep(remaining.to_std().unwrap()).await;
+    }
+}
+
+async fn send_reminder(ctx: Arc<Context>, channel_id: ChannelId, msg: &str) {
+    // TODO: Log when no permission to send message rather than panic
+    channel_id
+        .send_message(&ctx, |m| m.content(msg))
+        .await
+        .expect("Error sending reminder");
+}
+
+async fn remind_at(
+    db: Arc<RwLock<Db>>,
+    ctx: Arc<Context>,
+    channel_id: ChannelId,
+    datetime: NaiveDateTime,
+    key: DefaultKey,
+    msg: &str,
+) {
+    wait_until(datetime).await;
+
+    if db.read().await.has_reminder(channel_id, key) {
+        send_reminder(ctx, channel_id, msg).await;
+    }
+}
 
 pub struct Manager {
     db: Arc<RwLock<Db>>,
@@ -42,7 +75,7 @@ impl Manager {
             .map(|cd| cd.clone())
     }
 
-    pub fn start_reminding(
+    fn start_reminding(
         &self,
         ctx: Arc<Context>,
         channel_id: ChannelId,
@@ -52,31 +85,30 @@ impl Manager {
     ) {
         let db = Arc::clone(&self.db);
         tokio::spawn(async move {
-            let sched = reminder.sched;
-
-            for datetime in sched.upcoming(tz) {
-                // We ensure chrono::Duration::to_std cannot panic by checking that the number
-                // of seconds is positive. Additionally, a non-positive number of seconds means
-                // we don't have to sleep
-                let remaining = datetime.signed_duration_since(Utc::now());
-                if remaining.num_seconds() > 0 {
-                    sleep(remaining.to_std().unwrap()).await;
-                }
-
-                if db.read().await.has_reminder(channel_id, key) {
-                    // TODO: Log when no permission to send message rather than panic
-                    channel_id
-                        .send_message(&ctx, |m| m.content(&reminder.msg))
-                        .await
-                        .expect("Error sending reminder");
-
-                    // Retire one-shot reminders
-                    if reminder.once {
-                        break;
+            match reminder.reminder_type {
+                ReminderType::Scheduled(sched) => {
+                    for datetime in sched.upcoming(tz) {
+                        remind_at(
+                            Arc::clone(&db),
+                            Arc::clone(&ctx),
+                            channel_id,
+                            datetime.naive_utc(),
+                            key,
+                            &reminder.msg,
+                        )
+                        .await;
                     }
-                } else {
-                    // Another task removed this reminder so we stop
-                    break;
+                }
+                ReminderType::Once(datetime) => {
+                    remind_at(
+                        Arc::clone(&db),
+                        Arc::clone(&ctx),
+                        channel_id,
+                        datetime,
+                        key,
+                        &reminder.msg,
+                    )
+                    .await;
                 }
             }
 

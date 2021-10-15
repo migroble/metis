@@ -1,7 +1,8 @@
 use crate::{
     manager::Manager,
-    reminder::{ChannelData, Reminder},
+    reminder::{ChannelData, Reminder, ReminderType},
 };
+use chrono::TimeZone;
 use chrono_tz::Tz;
 use serenity::{
     builder::CreateInteractionResponseData,
@@ -59,11 +60,16 @@ impl ReminderMenu {
                                                 .expect("Error serializing key");
                                             opt.label(&r.msg)
                                                 .description(
-                                                    r.sched
-                                                        .upcoming(self.tz)
-                                                        .next()
-                                                        .map(|t| t.to_rfc2822())
-                                                        .unwrap_or("".to_string()),
+                                                    match &r.reminder_type {
+                                                        ReminderType::Scheduled(sched) => {
+                                                            sched.upcoming(self.tz).next()
+                                                        }
+                                                        ReminderType::Once(datetime) => Some(
+                                                            self.tz.from_utc_datetime(&datetime),
+                                                        ),
+                                                    }
+                                                    .map(|t| t.to_rfc2822())
+                                                    .unwrap_or("".to_string()),
                                                 )
                                                 .value(key.clone())
                                                 .default_selection(
