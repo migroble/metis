@@ -1,18 +1,18 @@
 use super::*;
 use crate::reminder_menu::ReminderMenu;
 
-pub struct List;
+pub struct Menu;
 
 #[async_trait]
-impl Command for List {
+impl Command for Menu {
     fn create(&self, command: &mut CreateApplicationCommand) {
         command
-            .name("list")
-            .description("Lists all reminders for this channel");
+            .name("menu")
+            .description("Show all reminders for this channel");
     }
 
     fn can_handle(&self, name: &str) -> bool {
-        name == "list"
+        name == "menu"
     }
 
     async fn handle(

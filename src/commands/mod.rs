@@ -11,11 +11,11 @@ use serenity::{
 use std::{collections::HashMap, sync::Arc};
 
 mod command;
-mod list;
+mod menu;
 mod remindme;
 mod tz;
 
 pub use command::Command;
-pub use list::List;
+pub use menu::Menu;
 pub use remindme::RemindMe;
 pub use tz::Tz;
