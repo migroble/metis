@@ -79,11 +79,6 @@ impl ReminderMenu {
                         })
                         .create_action_row(|ar| {
                             ar.create_button(|b| {
-                                b.style(ButtonStyle::Secondary)
-                                    .label("Done")
-                                    .custom_id("done")
-                            })
-                            .create_button(|b| {
                                 let b = b.style(ButtonStyle::Danger).label("Delete");
                                 if let Some(sel) = &self.selected {
                                     b.custom_id(&sel)
@@ -109,22 +104,6 @@ impl ReminderMenu {
                 self.selected = message.data.values.get(0).cloned();
             }
             ComponentType::Button => {
-                if message.data.custom_id == "done" {
-                    if let Err(why) = message
-                        .create_interaction_response(&ctx.http, move |response| {
-                            response
-                                .kind(InteractionResponseType::UpdateMessage)
-                                .interaction_response_data(|message| {
-                                    message.content("done").components(|comps| comps)
-                                })
-                        })
-                        .await
-                    {
-                        println!("Cannot respond to component interaction: {:#?}", why);
-                    }
-                    return;
-                }
-
                 // This should never panic because the custom_id is always the valid json string
                 // we generated in ReminderMenu::create
                 let key =
