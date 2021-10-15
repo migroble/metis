@@ -1,7 +1,5 @@
 use super::*;
 use crate::reminder::Reminder;
-use chrono::{Datelike, TimeZone, Timelike, Utc};
-use chrono_tz::Tz;
 use cron::Schedule;
 use std::str::FromStr;
 
@@ -88,32 +86,26 @@ impl Command for RemindMe {
 
         // cron string construction
 
-        // We get the timezone-adjusted current datetime as fallback values
-        let tz = manager
-            .channel_tz(command.channel_id)
-            .await
-            .unwrap_or(Tz::Etc__UTC);
-        let now = tz.from_utc_datetime(&Utc::now().naive_utc());
-
         // Day of month and day of week are interrelated, therefore we must be careful
         // when using them as fallback values
         //
-        // If only one is set, we should set the other to "?" rather than the current
-        // date to avoid unintended behaviour
+        // If only one is set, we should set the other to "?"
+        let question_mark = "?".to_string();
+        let asterisk = "*".to_string();
         let (dom, dow) = {
             let dom_opt = options.get("dom");
             let dow_opt = options.get("dow");
 
             if let Some(dom) = dom_opt {
                 if let Some(dow) = dow_opt {
-                    (dom.to_string(), dow.to_string())
+                    (dom, dow)
                 } else {
-                    (dom.to_string(), "?".to_string())
+                    (dom, &question_mark)
                 }
             } else if let Some(dow) = dow_opt {
-                ("?".to_string(), dow.to_string())
+                (&question_mark, dow)
             } else {
-                (now.day().to_string(), now.weekday().to_string())
+                (&asterisk, &asterisk)
             }
         };
 
@@ -121,12 +113,12 @@ impl Command for RemindMe {
         // the end user
         let sched = format!(
             "0 {} {} {} {} {} {}",
-            options.get("min").unwrap_or(&now.minute().to_string()),
-            options.get("hour").unwrap_or(&now.hour().to_string()),
+            options.get("min").unwrap_or(&asterisk),
+            options.get("hour").unwrap_or(&asterisk),
             dom,
-            options.get("month").unwrap_or(&now.month().to_string()),
+            options.get("month").unwrap_or(&asterisk),
             dow,
-            options.get("year").unwrap_or(&now.year().to_string()),
+            options.get("year").unwrap_or(&asterisk),
         );
 
         println!("{}", sched);
