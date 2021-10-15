@@ -22,19 +22,6 @@ impl Command for Menu {
         command: &ApplicationCommandInteraction,
         _options: HashMap<String, ApplicationCommandInteractionDataOptionValue>,
     ) {
-        manager
-            .channel_data(command.channel_id)
-            .await
-            .filter(|cd| cd.reminders.len() > 0)
-            .map(|cd| {
-                cd.reminders
-                    .iter()
-                    .map(|(_k, r)| r.sched.to_string() + " | " + &r.msg)
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            })
-            .unwrap_or("no reminders".to_string());
-
         let menu = ReminderMenu::new(&manager, command.channel_id).await;
         if let Err(why) = command
             .create_interaction_response(&ctx.http, move |response| {
