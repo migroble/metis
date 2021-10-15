@@ -22,6 +22,7 @@ pub struct Reminder {
     #[serde(with = "ScheduleDef")]
     pub sched: Schedule,
     pub msg: String,
+    pub once: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -69,6 +69,11 @@ impl Manager {
                         .send_message(&ctx, |m| m.content(&reminder.msg))
                         .await
                         .expect("Error sending reminder");
+
+                    // Retire one-shot reminders
+                    if reminder.once {
+                        break;
+                    }
                 } else {
                     // Another task removed this reminder so we stop
                     break;

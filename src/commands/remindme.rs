@@ -65,7 +65,7 @@ impl Command for RemindMe {
     }
 
     fn can_handle(&self, name: &str) -> bool {
-        name == "remindme"
+        name == "remindme" && name == "remindonce"
     }
 
     async fn handle(
@@ -138,7 +138,11 @@ impl Command for RemindMe {
                 .add_reminder(
                     Arc::clone(&ctx),
                     command.channel_id,
-                    Reminder { sched, msg },
+                    Reminder {
+                        sched,
+                        msg,
+                        once: command.data.name == "remindonce",
+                    },
                 )
                 .await;
 
