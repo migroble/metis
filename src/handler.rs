@@ -55,7 +55,7 @@ impl EventHandler for Handler {
                 let handler_opt = self
                     .commands
                     .iter()
-                    .filter(|c| c.can_handle(&command.data.name))
+                    .filter(|c| c.name() == command.data.name)
                     .next();
 
                 if let Some(c) = handler_opt {
@@ -90,7 +90,7 @@ impl EventHandler for Handler {
         .set_application_commands(&ctx.http, |commands| {
             self.commands.iter().fold(commands, |commands, c| {
                 commands.create_application_command(|command| {
-                    c.create(command);
+                    c.create(command.name(c.name()));
                     command
                 })
             })

@@ -6,9 +6,8 @@ use std::str::FromStr;
 struct Remind;
 
 impl Remind {
-    fn create(command: &mut CreateApplicationCommand, name: &str, description: &str) {
+    fn create(command: &mut CreateApplicationCommand, description: &str) {
         command
-            .name(name)
             .description(description)
             .create_option(|option| {
                 option
@@ -152,16 +151,15 @@ pub struct RemindMe;
 
 #[async_trait]
 impl Command for RemindMe {
+    fn name(&self) -> &str {
+        "remindme"
+    }
+
     fn create(&self, command: &mut CreateApplicationCommand) {
         Remind::create(
             command,
-            "remindme",
             "Sends message at scheduled time(s) using cron format",
         );
-    }
-
-    fn can_handle(&self, name: &str) -> bool {
-        name == "remindme"
     }
 
     async fn handle(
@@ -179,16 +177,15 @@ pub struct RemindOnce;
 
 #[async_trait]
 impl Command for RemindOnce {
+    fn name(&self) -> &'static str {
+        "remindonce"
+    }
+
     fn create(&self, command: &mut CreateApplicationCommand) {
         Remind::create(
             command,
-            "remindonce",
             "Sends message once at a scheduled time using cron format",
         );
-    }
-
-    fn can_handle(&self, name: &str) -> bool {
-        name == "remindonce"
     }
 
     async fn handle(

@@ -4,9 +4,12 @@ pub struct Tz;
 
 #[async_trait]
 impl Command for Tz {
+    fn name(&self) -> &str {
+        "tz"
+    }
+
     fn create(&self, command: &mut CreateApplicationCommand) {
         command
-            .name("tz")
             .description("Set timezone for this channel")
             .create_option(|option| {
                 option
@@ -15,10 +18,6 @@ impl Command for Tz {
                     .kind(ApplicationCommandOptionType::String)
                     .required(true)
             });
-    }
-
-    fn can_handle(&self, name: &str) -> bool {
-        name == "tz"
     }
 
     async fn handle(

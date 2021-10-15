@@ -2,9 +2,9 @@ use super::*;
 
 #[async_trait]
 pub trait Command {
-    fn create(&self, command: &mut CreateApplicationCommand);
+    fn name(&self) -> &str;
 
-    fn can_handle(&self, name: &str) -> bool;
+    fn create(&self, command: &mut CreateApplicationCommand);
 
     async fn handle(
         &self,

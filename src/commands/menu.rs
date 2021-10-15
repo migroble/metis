@@ -5,14 +5,12 @@ pub struct Menu;
 
 #[async_trait]
 impl Command for Menu {
-    fn create(&self, command: &mut CreateApplicationCommand) {
-        command
-            .name("menu")
-            .description("Show all reminders for this channel");
+    fn name(&self) -> &str {
+        "menu"
     }
 
-    fn can_handle(&self, name: &str) -> bool {
-        name == "menu"
+    fn create(&self, command: &mut CreateApplicationCommand) {
+        command.description("Show all reminders for this channel");
     }
 
     async fn handle(
