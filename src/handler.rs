@@ -64,8 +64,17 @@ impl EventHandler for Handler {
                 }
             }
             Interaction::MessageComponent(message) => {
-                let mut menu = ReminderMenu::new(&self.manager, message.channel_id).await;
-                menu.handle(Arc::clone(&ctx), &self.manager, &message).await;
+                let mut parts = message.data.custom_id.split("-");
+                if let Some(prefix) = parts.next() {
+                    match prefix {
+                        "menu" => {
+                            let mut menu =
+                                ReminderMenu::new(&self.manager, message.channel_id).await;
+                            menu.handle(Arc::clone(&ctx), &self.manager, &message).await;
+                        }
+                        _ => (),
+                    }
+                }
             }
             _ => (),
         }

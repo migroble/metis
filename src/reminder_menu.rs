@@ -50,7 +50,7 @@ impl ReminderMenu {
                     comps
                         .create_action_row(|ar| {
                             ar.create_select_menu(|sm| {
-                                sm.custom_id("reminders").options(|opts| {
+                                sm.custom_id("menu-reminders").options(|opts| {
                                     self.reminders.iter().fold(opts, |opts, (k, r)| {
                                         opts.create_option(|opt| {
                                             // This should never panic, any key should be
@@ -81,9 +81,9 @@ impl ReminderMenu {
                             ar.create_button(|b| {
                                 let b = b.style(ButtonStyle::Danger).label("Delete");
                                 if let Some(sel) = &self.selected {
-                                    b.custom_id(&sel)
+                                    b.custom_id(format!("menu-{}", &sel))
                                 } else {
-                                    b.custom_id("delete").disabled(true)
+                                    b.custom_id("menu-delete").disabled(true)
                                 }
                             })
                         })
@@ -107,7 +107,8 @@ impl ReminderMenu {
                 // This should never panic because the custom_id is always the valid json string
                 // we generated in ReminderMenu::create
                 let key =
-                    serde_json::from_str(&message.data.custom_id).expect("Error deserializing key");
+                    serde_json::from_str(&message.data.custom_id.strip_prefix("menu-").unwrap())
+                        .expect("Error deserializing key");
                 self.reminders.remove(&key);
                 self.selected = None;
                 manager.remove_reminder(message.channel_id, key).await;
