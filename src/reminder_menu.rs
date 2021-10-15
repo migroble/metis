@@ -58,19 +58,21 @@ impl ReminderMenu {
                                             // stringifiable
                                             let key = serde_json::to_string(k)
                                                 .expect("Error serializing key");
+                                            let (info, datetime) = match &r.reminder_type {
+                                                ReminderType::Scheduled(sched) => {
+                                                    ("Repeating", sched.upcoming(self.tz).next())
+                                                }
+                                                ReminderType::Once(datetime) => (
+                                                    "One-shot",
+                                                    Some(self.tz.from_utc_datetime(&datetime)),
+                                                ),
+                                            };
+                                            let datetime = datetime
+                                                .map(|t| t.to_rfc2822())
+                                                .unwrap_or("".to_string());
+
                                             opt.label(&r.msg)
-                                                .description(
-                                                    match &r.reminder_type {
-                                                        ReminderType::Scheduled(sched) => {
-                                                            sched.upcoming(self.tz).next()
-                                                        }
-                                                        ReminderType::Once(datetime) => Some(
-                                                            self.tz.from_utc_datetime(&datetime),
-                                                        ),
-                                                    }
-                                                    .map(|t| t.to_rfc2822())
-                                                    .unwrap_or("".to_string()),
-                                                )
+                                                .description(format!("{} ({})", datetime, info))
                                                 .value(key.clone())
                                                 .default_selection(
                                                     self.selected
