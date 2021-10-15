@@ -24,6 +24,7 @@ impl Command for List {
         manager
             .channel_data(command.channel_id)
             .await
+            .filter(|cd| cd.reminders.len() > 0)
             .map(|cd| {
                 cd.reminders
                     .iter()
