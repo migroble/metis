@@ -1,8 +1,10 @@
 use crate::{
     commands::{Command, Menu, RemindMe, RemindOnce, Tz},
     manager::Manager,
+    reminder::{Reminder, ReminderType},
     reminder_menu::ReminderMenu,
 };
+use chrono::{Duration, Utc};
 use serenity::{
     async_trait,
     model::{
@@ -64,13 +66,29 @@ impl EventHandler for Handler {
                 }
             }
             Interaction::MessageComponent(message) => {
-                let mut parts = message.data.custom_id.split("-");
+                let mut parts = message.data.custom_id.splitn(2, "-");
                 if let Some(prefix) = parts.next() {
                     match prefix {
                         "menu" => {
                             let mut menu =
                                 ReminderMenu::new(&self.manager, message.channel_id).await;
                             menu.handle(Arc::clone(&ctx), &self.manager, &message).await;
+                        }
+                        "postpone" => {
+                            let mut data = parts.next().unwrap().splitn(2, "-");
+                            let dt = data.next().unwrap().parse().unwrap();
+                            let msg = data.next().unwrap();
+
+                            let reminder = Reminder {
+                                reminder_type: ReminderType::Once(
+                                    Utc::now().naive_utc() + Duration::minutes(dt),
+                                ),
+                                msg: "Postponed: ".to_string() + msg,
+                            };
+
+                            self.manager
+                                .add_reminder(Arc::clone(&ctx), message.channel_id, reminder)
+                                .await;
                         }
                         _ => (),
                     }

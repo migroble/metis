@@ -4,7 +4,10 @@ use crate::{
 };
 use chrono::{NaiveDateTime, Utc};
 use chrono_tz::{ParseError, Tz};
-use serenity::{model::id::ChannelId, prelude::*};
+use serenity::{
+    model::{id::ChannelId, interactions::message_component::ButtonStyle},
+    prelude::*,
+};
 use slotmap::DefaultKey;
 use std::sync::Arc;
 use tokio::{sync::RwLock, time::sleep};
@@ -19,14 +22,6 @@ async fn wait_until(datetime: NaiveDateTime) {
     }
 }
 
-async fn send_reminder(ctx: Arc<Context>, channel_id: ChannelId, msg: &str) {
-    // TODO: Log when no permission to send message rather than panic
-    channel_id
-        .send_message(&ctx, |m| m.content(msg))
-        .await
-        .expect("Error sending reminder");
-}
-
 async fn remind_at(
     db: Arc<RwLock<Db>>,
     ctx: Arc<Context>,
@@ -38,7 +33,24 @@ async fn remind_at(
     wait_until(datetime).await;
 
     if db.read().await.has_reminder(channel_id, key) {
-        send_reminder(ctx, channel_id, msg).await;
+        // TODO: Log when no permission to send message rather than panic
+
+        channel_id
+            .send_message(&ctx, |m| {
+                m.content(msg).components(|comps| {
+                    comps.create_action_row(|ar| {
+                        [5, 15, 30].into_iter().fold(ar, |ar, dt| {
+                            ar.create_button(|b| {
+                                b.style(ButtonStyle::Secondary)
+                                    .label(format!("+{} min", dt))
+                                    .custom_id(format!("postpone-{}-{}", dt, msg))
+                            })
+                        })
+                    })
+                })
+            })
+            .await
+            .expect("Error sending reminder");
     }
 }
 
