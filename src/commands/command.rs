@@ -12,5 +12,5 @@ pub trait Command {
         manager: &Manager,
         command: &ApplicationCommandInteraction,
         options: HashMap<String, ApplicationCommandInteractionDataOptionValue>,
-    ) -> String;
+    );
 }

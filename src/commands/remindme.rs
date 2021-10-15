@@ -74,7 +74,7 @@ impl Command for RemindMe {
         manager: &Manager,
         command: &ApplicationCommandInteraction,
         options: HashMap<String, ApplicationCommandInteractionDataOptionValue>,
-    ) -> String {
+    ) {
         let options = options
             .into_iter()
             .map(|(k, v)| {
@@ -130,7 +130,7 @@ impl Command for RemindMe {
         );
 
         println!("{}", sched);
-        if let Ok(sched) = Schedule::from_str(&sched) {
+        let content = if let Ok(sched) = Schedule::from_str(&sched) {
             // The msg option is required, we are guaranteed to have it
             let msg = options.get("msg").unwrap().to_string();
 
@@ -146,6 +146,15 @@ impl Command for RemindMe {
         } else {
             "invalid cron expression"
         }
-        .to_string()
+        .to_string();
+
+        if let Err(why) = command
+            .create_interaction_response(&ctx.http, move |response| {
+                response.interaction_response_data(|message| message.content(content))
+            })
+            .await
+        {
+            println!("Cannot respond to slash command: {:#?}", why);
+        }
     }
 }

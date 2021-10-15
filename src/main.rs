@@ -5,6 +5,7 @@ mod db;
 mod handler;
 mod manager;
 mod reminder;
+mod reminder_menu;
 
 use dotenv::dotenv;
 use handler::Handler;

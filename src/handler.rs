@@ -1,16 +1,14 @@
 use crate::{
     commands::{Command, List, RemindMe, Tz},
     manager::Manager,
+    reminder_menu::ReminderMenu,
 };
 use serenity::{
     async_trait,
     model::{
         gateway::Ready,
         id::GuildId,
-        interactions::{
-            application_command::ApplicationCommand, Interaction,
-            InteractionApplicationCommandCallbackDataFlags, InteractionResponseType,
-        },
+        interactions::{application_command::ApplicationCommand, Interaction},
     },
     prelude::*,
 };
@@ -36,51 +34,40 @@ impl Handler {
 #[async_trait]
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        if let Interaction::ApplicationCommand(command) = interaction {
-            let ctx = Arc::new(ctx);
-            let options = command
-                .data
-                .options
-                .iter()
-                .map(|o| {
-                    (
-                        o.name.clone(),
-                        o.resolved.as_ref().expect("Expected option").clone(),
-                    )
-                })
-                .collect();
+        let ctx = Arc::new(ctx);
 
-            // TODO: Add list and remove reminder commands (explore using action row -> list
-            // + delete button)
+        match interaction {
+            Interaction::ApplicationCommand(command) => {
+                let options = command
+                    .data
+                    .options
+                    .iter()
+                    .map(|o| {
+                        (
+                            o.name.clone(),
+                            o.resolved.as_ref().expect("Expected option").clone(),
+                        )
+                    })
+                    .collect();
 
-            // TODO: Add tempremindme command that creates an action row with a button to
-            // stop the reminders
-            let handler_opt = self
-                .commands
-                .iter()
-                .filter(|c| c.can_handle(&command.data.name))
-                .next();
+                // TODO: Add tempremindme command that creates an action row with a button to
+                // stop the reminders
+                let handler_opt = self
+                    .commands
+                    .iter()
+                    .filter(|c| c.can_handle(&command.data.name))
+                    .next();
 
-            let content = if let Some(c) = handler_opt {
-                c.handle(Arc::clone(&ctx), &self.manager, &command, options)
-                    .await
-            } else {
-                "not_implemented".to_string()
-            };
-
-            if let Err(why) = command
-                .create_interaction_response(&ctx.http, |response| {
-                    response
-                        .kind(InteractionResponseType::ChannelMessageWithSource)
-                        .interaction_response_data(|message| {
-                            message.content(content)
-                            // .flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
-                        })
-                })
-                .await
-            {
-                println!("Cannot respond to slash command: {}", why);
+                if let Some(c) = handler_opt {
+                    c.handle(Arc::clone(&ctx), &self.manager, &command, options)
+                        .await
+                }
             }
+            Interaction::MessageComponent(message) => {
+                let mut menu = ReminderMenu::new(&self.manager, message.channel_id).await;
+                menu.handle(Arc::clone(&ctx), &self.manager, &message).await;
+            }
+            _ => (),
         }
     }
 

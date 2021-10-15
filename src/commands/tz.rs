@@ -23,11 +23,11 @@ impl Command for Tz {
 
     async fn handle(
         &self,
-        _ctx: Arc<Context>,
+        ctx: Arc<Context>,
         manager: &Manager,
         command: &ApplicationCommandInteraction,
         options: HashMap<String, ApplicationCommandInteractionDataOptionValue>,
-    ) -> String {
+    ) {
         let tz_str = if let ApplicationCommandInteractionDataOptionValue::String(s) = &options["tz"]
         {
             s
@@ -35,7 +35,7 @@ impl Command for Tz {
             panic!("Expected string option");
         };
 
-        if manager.set_channel_tz(command.channel_id, &tz_str)
+        let content = if manager.set_channel_tz(command.channel_id, &tz_str)
             .await
             .is_ok()
         {
@@ -43,6 +43,15 @@ impl Command for Tz {
         } else {
             "invalid timezone (list of timezone names: <https://w.wiki/4Jx>, capitalization matters!)"
         }
-        .to_string()
+        .to_string();
+
+        if let Err(why) = command
+            .create_interaction_response(&ctx.http, move |response| {
+                response.interaction_response_data(|message| message.content(content))
+            })
+            .await
+        {
+            println!("Cannot respond to slash command: {:#?}", why);
+        }
     }
 }

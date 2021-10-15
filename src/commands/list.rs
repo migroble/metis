@@ -1,4 +1,5 @@
 use super::*;
+use crate::reminder_menu::ReminderMenu;
 
 pub struct List;
 
@@ -16,11 +17,11 @@ impl Command for List {
 
     async fn handle(
         &self,
-        _ctx: Arc<Context>,
+        ctx: Arc<Context>,
         manager: &Manager,
         command: &ApplicationCommandInteraction,
         _options: HashMap<String, ApplicationCommandInteractionDataOptionValue>,
-    ) -> String {
+    ) {
         manager
             .channel_data(command.channel_id)
             .await
@@ -32,6 +33,16 @@ impl Command for List {
                     .collect::<Vec<_>>()
                     .join("\n")
             })
-            .unwrap_or("no reminders".to_string())
+            .unwrap_or("no reminders".to_string());
+
+        let menu = ReminderMenu::new(&manager, command.channel_id).await;
+        if let Err(why) = command
+            .create_interaction_response(&ctx.http, move |response| {
+                response.interaction_response_data(|command| menu.create(command))
+            })
+            .await
+        {
+            println!("Cannot respond to slash command: {:#?}", why);
+        }
     }
 }
