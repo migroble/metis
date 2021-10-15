@@ -51,38 +51,41 @@ impl ReminderMenu {
                     comps
                         .create_action_row(|ar| {
                             ar.create_select_menu(|sm| {
-                                sm.custom_id("menu-reminders").options(|opts| {
-                                    self.reminders.iter().fold(opts, |opts, (k, r)| {
-                                        opts.create_option(|opt| {
-                                            // This should never panic, any key should be
-                                            // stringifiable
-                                            let key = serde_json::to_string(k)
-                                                .expect("Error serializing key");
-                                            let (info, datetime) = match &r.reminder_type {
-                                                ReminderType::Scheduled(sched) => {
-                                                    ("Repeating", sched.upcoming(self.tz).next())
-                                                }
-                                                ReminderType::Once(datetime) => (
-                                                    "One-shot",
-                                                    Some(self.tz.from_utc_datetime(&datetime)),
-                                                ),
-                                            };
-                                            let datetime = datetime
-                                                .map(|t| t.to_rfc2822())
-                                                .unwrap_or("".to_string());
+                                sm.min_values(0)
+                                    .custom_id("menu-reminders")
+                                    .options(|opts| {
+                                        self.reminders.iter().fold(opts, |opts, (k, r)| {
+                                            opts.create_option(|opt| {
+                                                // This should never panic, any key should be
+                                                // stringifiable
+                                                let key = serde_json::to_string(k)
+                                                    .expect("Error serializing key");
+                                                let (info, datetime) = match &r.reminder_type {
+                                                    ReminderType::Scheduled(sched) => (
+                                                        "Repeating",
+                                                        sched.upcoming(self.tz).next(),
+                                                    ),
+                                                    ReminderType::Once(datetime) => (
+                                                        "One-shot",
+                                                        Some(self.tz.from_utc_datetime(&datetime)),
+                                                    ),
+                                                };
+                                                let datetime = datetime
+                                                    .map(|t| t.to_rfc2822())
+                                                    .unwrap_or("".to_string());
 
-                                            opt.label(&r.msg)
-                                                .description(format!("{} ({})", datetime, info))
-                                                .value(key.clone())
-                                                .default_selection(
-                                                    self.selected
-                                                        .as_ref()
-                                                        .map(|s| *s == key)
-                                                        .unwrap_or(false),
-                                                )
+                                                opt.label(&r.msg)
+                                                    .description(format!("{} ({})", datetime, info))
+                                                    .value(key.clone())
+                                                    .default_selection(
+                                                        self.selected
+                                                            .as_ref()
+                                                            .map(|s| *s == key)
+                                                            .unwrap_or(false),
+                                                    )
+                                            })
                                         })
                                     })
-                                })
                             })
                         })
                         .create_action_row(|ar| {
