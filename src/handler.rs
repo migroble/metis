@@ -10,7 +10,9 @@ use serenity::{
     model::{
         gateway::Ready,
         id::GuildId,
-        interactions::{application_command::ApplicationCommand, Interaction},
+        interactions::{
+            application_command::ApplicationCommand, Interaction, InteractionResponseType,
+        },
     },
     prelude::*,
 };
@@ -89,6 +91,17 @@ impl EventHandler for Handler {
                             self.manager
                                 .add_reminder(Arc::clone(&ctx), message.channel_id, reminder)
                                 .await;
+
+                            if let Err(why) = message
+                                .create_interaction_response(&ctx.http, move |response| {
+                                    response
+                                        .kind(InteractionResponseType::UpdateMessage)
+                                        .interaction_response_data(|message| message)
+                                })
+                                .await
+                            {
+                                println!("Cannot respond to component interaction: {:#?}", why);
+                            }
                         }
                         _ => (),
                     }
