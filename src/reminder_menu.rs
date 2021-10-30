@@ -24,6 +24,14 @@ pub struct ReminderMenu {
     selected: Option<String>,
 }
 
+fn limit_length(message: &str, len: usize) -> String {
+    if message.len() >= len {
+        message.get(..(len - 3)).unwrap().to_string() + "..."
+    } else {
+        message.to_string()
+    }
+}
+
 impl ReminderMenu {
     pub async fn new(manager: &Manager, channel_id: ChannelId) -> Self {
         let channel = manager
@@ -74,7 +82,7 @@ impl ReminderMenu {
                                                     .map(|t| t.to_rfc2822())
                                                     .unwrap_or("".to_string());
 
-                                                opt.label(&r.msg)
+                                                opt.label(limit_length(&r.msg, 100))
                                                     .description(format!("{} ({})", datetime, info))
                                                     .value(key.clone())
                                                     .default_selection(
