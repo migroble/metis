@@ -12,12 +12,9 @@ use handler::Handler;
 use serenity::prelude::*;
 use std::env;
 
-#[cfg(all(target_env = "musl", target_pointer_width = "64"))]
-use mimalloc::MiMalloc;
-
-#[cfg(all(target_env = "musl", target_pointer_width = "64"))]
+#[cfg(feature = "mimalloc")]
 #[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[tokio::main]
 async fn main() {
