@@ -11,7 +11,8 @@ use serenity::{
         gateway::Ready,
         id::GuildId,
         interactions::{
-            application_command::ApplicationCommand, Interaction, InteractionResponseType,
+            application_command::ApplicationCommand, message_component::InteractionMessage,
+            Interaction, InteractionResponseType,
         },
     },
     prelude::*,
@@ -77,15 +78,19 @@ impl EventHandler for Handler {
                             menu.handle(Arc::clone(&ctx), &self.manager, &message).await;
                         }
                         "postpone" => {
-                            let mut data = parts.next().unwrap().splitn(2, "-");
-                            let dt = data.next().unwrap().parse().unwrap();
-                            let msg = data.next().unwrap();
+                            let dt = parts.next().unwrap().parse().unwrap();
+                            let msg = if let InteractionMessage::Regular(ref msg) = message.message
+                            {
+                                msg.content.clone()
+                            } else {
+                                unreachable!();
+                            };
 
                             let reminder = Reminder {
                                 reminder_type: ReminderType::Once(
                                     Utc::now().naive_utc() + Duration::minutes(dt),
                                 ),
-                                msg: "Postponed: ".to_string() + msg,
+                                msg,
                             };
 
                             self.manager

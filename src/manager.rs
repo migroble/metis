@@ -43,7 +43,7 @@ async fn remind_at(
                             ar.create_button(|b| {
                                 b.style(ButtonStyle::Secondary)
                                     .label(format!("+{} min", dt))
-                                    .custom_id(format!("postpone-{}-{}", dt, msg))
+                                    .custom_id(format!("postpone-{}", dt))
                             })
                         })
                     })
