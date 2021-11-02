@@ -14,7 +14,7 @@ WORKDIR $NAME
 
 # Pre-build deps
 COPY Cargo.toml .
-RUN cargo build --release --target $TARGET
+RUN cargo build --features mimalloc --release --target $TARGET
 RUN rm src/*.rs
 
 # Copy source code
