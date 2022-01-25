@@ -13,7 +13,7 @@ RUN USER=root cargo new --bin $NAME
 WORKDIR $NAME
 
 # Pre-build deps
-COPY Cargo.toml .
+COPY Cargo.toml Cargo.lock ./
 RUN cargo build --features mimalloc --release --target $TARGET
 RUN rm src/*.rs
 
