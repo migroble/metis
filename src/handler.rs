@@ -9,18 +9,13 @@ use serenity::{
     async_trait,
     model::{
         gateway::Ready,
-        id::GuildId,
         interactions::{
-            application_command::ApplicationCommand, message_component::InteractionMessage,
-            Interaction, InteractionResponseType,
+            application_command::ApplicationCommand, Interaction, InteractionResponseType,
         },
     },
     prelude::*,
 };
 use std::sync::Arc;
-
-// DEV DEP: Used to get DEV_GUILD
-use std::env;
 
 pub struct Handler {
     manager: Manager,
@@ -79,12 +74,7 @@ impl EventHandler for Handler {
                         }
                         "postpone" => {
                             let dt = parts.next().unwrap().parse().unwrap();
-                            let msg = if let InteractionMessage::Regular(ref msg) = message.message
-                            {
-                                msg.content.clone()
-                            } else {
-                                unreachable!();
-                            };
+                            let msg = message.message.content.clone();
 
                             let reminder = Reminder {
                                 reminder_type: ReminderType::Once(
@@ -125,14 +115,7 @@ impl EventHandler for Handler {
         self.manager.start_reminders(Arc::clone(&ctx)).await;
 
         // Set commands up
-        // ApplicationCommand::set_global_application_commands
-        GuildId(
-            env::var("DEV_GUILD")
-                .expect("Expected dev guild ID in the environment")
-                .parse()
-                .expect("Failed to parse guild ID"),
-        )
-        .set_application_commands(&ctx.http, |commands| {
+        ApplicationCommand::set_global_application_commands(&ctx.http, |commands| {
             self.commands.iter().fold(commands, |commands, c| {
                 commands.create_application_command(|command| {
                     c.create(command.name(c.name()));
